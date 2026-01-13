@@ -1,7 +1,9 @@
 "use client";
 
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Device } from "@/types/device";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { getWindowDeviceType } from "@/lib/device";
+import { DEVICE_TYPE_CHANGE_EVENT, deviceBus } from "@/events/device/deviceBus.client";
 
 interface DeviceContextType {
   device: Device;
@@ -16,7 +18,25 @@ export function DeviceProvider({
   children: ReactNode;
   initialDevice: Device;
 }) {
-  const [device] = useState(initialDevice);
+  const [device, setDevice] = useState<Device>(initialDevice);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const newDeviceType = getWindowDeviceType();
+      if (newDeviceType !== device) {
+        setDevice(newDeviceType);
+        deviceBus.emit(DEVICE_TYPE_CHANGE_EVENT, newDeviceType);
+      }
+    };
+
+    // 클라이언트 사이드에서 초기 deviceType 설정
+    handleResize(); 
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [device]);
 
   return (
     <DeviceContext.Provider value={{ device }}>
