@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Device } from "@/types/device";
 import { getWindowDeviceType } from "@/lib/device";
-import { DEVICE_TYPE_CHANGE_EVENT, deviceBus } from "@/events/device/deviceBus.client";
+import { deviceBus } from "@/events/device/deviceBus.client";
 
 interface DeviceContextType {
   device: Device;
@@ -25,7 +25,7 @@ export function DeviceProvider({
       const newDeviceType = getWindowDeviceType();
       if (newDeviceType !== device) {
         setDevice(newDeviceType);
-        deviceBus.emit(DEVICE_TYPE_CHANGE_EVENT, newDeviceType);
+        deviceBus.set(newDeviceType);
       }
     };
 
