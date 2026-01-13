@@ -27,8 +27,18 @@ import {
   WhiteBtn,
 } from "./styles";
 import { BlueSpan } from "@/components/common/text/styles";
+import { useRouter } from "next/navigation";
 
 export default function DesktopMain() {
+  const router = useRouter();
+
+  const goQuiz = () => {
+    router.push("quiz");
+  };
+
+  const goKit = () => {
+    router.push("kit");
+  };
   return (
     <MainWrap>
       <HeaderWrap>
@@ -45,8 +55,8 @@ export default function DesktopMain() {
           </IntroductionText>
         </TextWrap>
         <BtnWrap>
-          <BlueBtn>키트 안내</BlueBtn>
-          <WhiteBtn>퀴즈 풀기</WhiteBtn>
+          <BlueBtn onClick={goKit}>키트 안내</BlueBtn>
+          <WhiteBtn onClick={goQuiz}>퀴즈 풀기</WhiteBtn>
         </BtnWrap>
         <IntroductionMedia>
           <video autoPlay loop muted playsInline>

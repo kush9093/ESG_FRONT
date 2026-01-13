@@ -27,8 +27,19 @@ import {
   WhiteBtn,
 } from "./styles";
 import { BlueSpan } from "@/components/common/text/styles";
+import { useRouter } from "next/navigation";
 
 export default function DesktopMain() {
+  const router = useRouter();
+
+  const goQuiz = () => {
+    router.push("quiz");
+  };
+
+  const goKit = () => {
+    router.push("kit");
+  };
+
   return (
     <MainWrap>
       <HeaderWrap>
@@ -45,8 +56,8 @@ export default function DesktopMain() {
           </IntroductionText>
         </TextWrap>
         <BtnWrap>
-          <BlueBtn>키트 안내</BlueBtn>
-          <WhiteBtn>퀴즈 풀기</WhiteBtn>
+          <BlueBtn onClick={goKit}>키트 안내</BlueBtn>
+          <WhiteBtn onClick={goQuiz}>퀴즈 풀기</WhiteBtn>
         </BtnWrap>
         <IntroductionMedia>
           <video autoPlay loop muted playsInline>
@@ -90,8 +101,8 @@ export default function DesktopMain() {
               <KitColorText>놀이</KitColorText>가 됩니다.
             </KitBodyTitle>
             <KitBodyText>
-              시험지 대신 스마트기기를 꺼내 퀴즈를 풀어보세요.​​ 퀴즈 풀이와
-              함께 참여자들간 실시간 랭킹을 ​비교해볼 수 ​있습니다.
+              모형 키트와 퀴즈로 에어컨의 순환 원리를 직접 체험하세요. 아이들이
+              만지고 움직이며 이해하는 새로운 과학 수업.
             </KitBodyText>
           </KitBodyWrap>
           <QuizBodyImage src={"/images/kit_image.png"} />
