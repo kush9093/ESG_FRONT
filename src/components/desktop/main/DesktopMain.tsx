@@ -1,19 +1,27 @@
-import { DefaultHr } from "@/components/common/hr/styles";
+import { DefaultHr, ShortHr } from "@/components/common/hr/styles";
 import {
   BlueBtn,
+  BodyWrap,
   BtnWrap,
+  CheckIcon,
   HeaderText,
   HeaderWrap,
   IntroductionMedia,
   IntroductionText,
   IntroductionWrap,
-  KitLeft,
-  KitRight,
-  KitText,
+  KitBodyText,
+  KitBodyTitle,
+  KitBodyWrap,
+  KitColorText,
   KitWrap,
   MainWrap,
-  QuizLeft,
-  QuizText,
+  QuizbodyBoldText,
+  QuizbodyContent,
+  QuizBodyImage,
+  QuizbodyText,
+  QuizBodyWrap,
+  QuizHeaderTitle,
+  QuizHeaderWrap,
   QuizWrap,
   TextWrap,
   WhiteBtn,
@@ -47,17 +55,47 @@ export default function DesktopMain() {
         </IntroductionMedia>
       </IntroductionWrap>
       <QuizWrap>
-        <QuizLeft>
-          <QuizText>퀴즈를 풀어봅시다</QuizText>
-          <WhiteBtn>퀴즈 풀기</WhiteBtn>
-        </QuizLeft>
+        <QuizHeaderWrap>
+          <ShortHr />
+          <QuizHeaderTitle>QUIZ</QuizHeaderTitle>
+        </QuizHeaderWrap>
+        <QuizBodyWrap>
+          <QuizBodyImage src={"/images/quiz_dummy.png"} />
+          <BodyWrap>
+            <QuizbodyContent>
+              <CheckIcon />
+              <QuizbodyBoldText>MEDIA</QuizbodyBoldText>
+              <QuizbodyText>동영상과 함께</QuizbodyText>
+            </QuizbodyContent>
+            <QuizbodyContent>
+              <CheckIcon />
+              <QuizbodyBoldText>O/X</QuizbodyBoldText>
+              <QuizbodyText>간단한 퀴즈로</QuizbodyText>
+            </QuizbodyContent>
+            귀여운 냉매 친구들이 에어컨 안에서 여행을 하고 있어요! 이 퀴즈를
+            풀면서 냉매가 언제 뜨거워지고, 언제 차가워지는지 맞혀보세요. O / X
+            문제를 풀다 보면 어느새 에어컨의 비밀을 모두 알게 될 거예요!
+          </BodyWrap>
+        </QuizBodyWrap>
       </QuizWrap>
       <KitWrap>
-        <KitLeft></KitLeft>
-        <KitRight>
-          <KitText>키트를 만들어봅시다</KitText>
-          <WhiteBtn>키트 안내</WhiteBtn>
-        </KitRight>
+        <QuizHeaderWrap>
+          <ShortHr />
+          <QuizHeaderTitle>KIT</QuizHeaderTitle>
+        </QuizHeaderWrap>
+        <QuizBodyWrap>
+          <KitBodyWrap>
+            <KitBodyTitle>
+              지루했던 수업이
+              <KitColorText>놀이</KitColorText>가 됩니다.
+            </KitBodyTitle>
+            <KitBodyText>
+              시험지 대신 스마트기기를 꺼내 퀴즈를 풀어보세요.​​ 퀴즈 풀이와
+              함께 참여자들간 실시간 랭킹을 ​비교해볼 수 ​있습니다.
+            </KitBodyText>
+          </KitBodyWrap>
+          <QuizBodyImage src={"/images/kit_image.png"} />
+        </QuizBodyWrap>
       </KitWrap>
     </MainWrap>
   );

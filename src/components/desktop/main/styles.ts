@@ -80,59 +80,97 @@ export const WhiteBtn = styled.button`
 `;
 
 export const QuizWrap = styled.div`
-  display: flex;
   width: 100%;
-  height: 100vh;
-
-  background-image: url("/images/quiz_dummy.png");
-  background-position: calc(100% + 250px);
-  background-repeat: no-repeat;
-  background-size: cover;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 50px;
+  padding-top: 50px;
+  padding-bottom: 50px;
 `;
 
-export const QuizLeft = styled.div`
-  width: 60%;
-  background: #4a7fd4;
-  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%);
+export const QuizHeaderWrap = styled.div`
+  width: 100%;
+  height: 20%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 5px;
+`;
+
+export const QuizHeaderTitle = styled.div`
+  font-size: 42px;
+  font-weight: 500;
+`;
+
+export const QuizBodyWrap = styled.div`
+  display: flex;
+  width: 80%;
+  height: 50vh;
   gap: 20px;
 `;
-export const QuizText = styled.div`
-  font-size: 70px;
-  font-weight: bold;
-  color: #ffffff;
+
+export const QuizBodyImage = styled.img`
+  width: 60%;
+`;
+
+export const BodyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #777;
+  font-size: 16px;
+`;
+
+export const QuizbodyContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+export const CheckIcon = styled.div`
+  background: url(/images/check_icon.png) no-repeat center center;
+  width: 24px;
+  height: 24px;
+`;
+export const QuizbodyBoldText = styled.div`
+  color: #000;
+  font-size: 27px;
+  font-weight: 800;
+`;
+export const QuizbodyText = styled.div`
+  font-size: 17px;
+  color: #333;
 `;
 
 export const KitWrap = styled.div`
-  display: flex;
   width: 100%;
-  height: 100vh;
-
-  background-image: url("/images/kit_image.png");
-  background-position: calc(100% - 700px);
-  background-repeat: no-repeat;
-  background-size: contain;
-`;
-export const KitLeft = styled.div`
-  width: 40%;
-`;
-
-export const KitRight = styled.div`
-  width: 60%;
-  background: #4a7fd4;
-  clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%);
+  background-color: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
+  gap: 50px;
+  padding-top: 50px;
+  padding-bottom: 50px;
 `;
 
-export const KitText = styled.div`
-  font-size: 70px;
+export const KitBodyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+`;
+
+export const KitBodyTitle = styled.div`
+  font-size: 41px;
   font-weight: bold;
-  color: #ffffff;
+`;
+export const KitColorText = styled.span`
+  color: #467fd7;
+`;
+
+export const KitBodyText = styled.div`
+  font-size: 19px;
+  color: #777;
 `;

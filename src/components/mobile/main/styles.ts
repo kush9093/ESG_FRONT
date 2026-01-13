@@ -3,8 +3,7 @@ import styled from "styled-components";
 export const MainWrap = styled.div``;
 
 export const HeaderWrap = styled.header`
-  padding: 10px 0px 10px 0px;
-  text-align: center;
+  padding: 10px 0px 10px 100px;
 `;
 
 export const HeaderText = styled.div`
@@ -18,6 +17,7 @@ export const IntroductionWrap = styled.div`
   display: flex;
   flex-direction: column;
   text-align: center;
+  margin-top: 50px;
   gap: 20px;
 `;
 
@@ -29,7 +29,7 @@ export const TextWrap = styled.div`
 
 export const IntroductionText = styled.div`
   font-family: var(--font-montserrat), sans-serif;
-  font-size: 40px;
+  font-size: 50px;
   font-weight: bold;
   color: black;
 `;
@@ -41,7 +41,7 @@ export const IntroductionMedia = styled.div`
 
   video {
     inset: 0;
-    width: 100%;
+    width: 60%;
     height: 100%;
     object-fit: cover;
   }
@@ -56,7 +56,7 @@ export const BtnWrap = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 20px;
 `;
 
 export const BlueBtn = styled.button`
@@ -81,56 +81,98 @@ export const WhiteBtn = styled.button`
 
 export const QuizWrap = styled.div`
   width: 100%;
-  height: 100vh;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 50px;
+  padding-top: 50px;
+  padding-bottom: 50px;
 `;
 
-export const QuizLeft = styled.div`
-  height: 50vh;
-  background: #4a7fd4;
+export const QuizHeaderWrap = styled.div`
+  width: 100%;
+  height: 20%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 5px;
+`;
+
+export const QuizHeaderTitle = styled.div`
+  font-size: 42px;
+  font-weight: 500;
+`;
+
+export const QuizBodyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 80%;
+  height: 50vh;
   gap: 20px;
 `;
 
-export const QuizRight = styled.div`
-  height: 50vh;
-  background-image: url("/images/quiz_dummy.png");
-  background-position: center;
-  background-size: cover;
+export const QuizBodyImage = styled.img`
+  width: 100%;
 `;
-export const QuizText = styled.div`
-  font-size: 40px;
-  font-weight: bold;
-  color: #ffffff;
+
+export const BodyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #777;
+  font-size: 16px;
+`;
+
+export const QuizbodyContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+export const CheckIcon = styled.div`
+  background: url(/images/check_icon.png) no-repeat center center;
+  width: 24px;
+  height: 24px;
+`;
+export const QuizbodyBoldText = styled.div`
+  color: #000;
+  font-size: 27px;
+  font-weight: 800;
+`;
+export const QuizbodyText = styled.div`
+  font-size: 17px;
+  color: #333;
 `;
 
 export const KitWrap = styled.div`
   width: 100%;
-  height: 100vh;
-`;
-export const KitLeft = styled.div`
-  width: 100%;
-  height: 50vh;
-  background-image: url("/images/kit_image.png");
-  background-position: center;
-  background-size: cover;
-`;
-
-export const KitRight = styled.div`
-  width: 100%;
-  height: 50vh;
-  background: #4a7fd4;
+  background-color: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
+  gap: 50px;
+  padding-top: 50px;
+  padding-bottom: 50px;
 `;
 
-export const KitText = styled.div`
-  font-size: 40px;
+export const KitBodyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: 30px;
+`;
+
+export const KitBodyTitle = styled.div`
+  font-size: 41px;
   font-weight: bold;
-  color: #ffffff;
+`;
+export const KitColorText = styled.span`
+  color: #467fd7;
+`;
+
+export const KitBodyText = styled.div`
+  font-size: 19px;
+  color: #777;
 `;
