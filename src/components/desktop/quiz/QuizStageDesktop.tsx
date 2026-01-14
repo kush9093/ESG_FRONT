@@ -388,7 +388,7 @@ const OXBtn = styled.button`
   cursor: pointer;
 `;
 const OXImg = styled.img`
-  width: clamp(800px, 16vw, 240px);
+  width: 50vw;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
 `;
 const ReplayBtn = styled.button`
