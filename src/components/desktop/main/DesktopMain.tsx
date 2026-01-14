@@ -33,11 +33,11 @@ export default function DesktopMain() {
   const router = useRouter();
 
   const goQuiz = () => {
-    router.push("quiz");
+    router.push("/quiz");
   };
 
   const goKit = () => {
-    router.push("kit");
+    router.push("/kit");
   };
 
   return (
