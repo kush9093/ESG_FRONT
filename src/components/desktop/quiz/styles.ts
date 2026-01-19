@@ -22,7 +22,8 @@ export const BoardSurface = styled.div`
   overflow: hidden;
 
   /* 초록 칠판 + 얼룩 */
-  background: radial-gradient(
+  background:
+    radial-gradient(
       circle at 20% 30%,
       rgba(255, 255, 255, 0.06),
       transparent 55%
@@ -36,7 +37,8 @@ export const BoardSurface = styled.div`
     linear-gradient(180deg, #1f5b4b, #194e41);
 
   /* 안쪽 테두리(프레임 안쪽 음영) */
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06),
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
     inset 0 0 35px rgba(0, 0, 0, 0.35);
 
   /* 분필 가루 질감(이미지 없이) */
@@ -46,7 +48,8 @@ export const BoardSurface = styled.div`
     inset: 0;
     pointer-events: none;
     opacity: 0.18;
-    background: repeating-linear-gradient(
+    background:
+      repeating-linear-gradient(
         0deg,
         rgba(255, 255, 255, 0.05) 0px,
         rgba(255, 255, 255, 0.05) 1px,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useRef } from "react";
 import styled, { keyframes } from "styled-components";
 import { QUIZ_ITEMS, QuizItem } from "./quizData";
 
@@ -13,6 +14,7 @@ export default function QuizStageDesktop({
   allowReplayCompleted,
   activeItem,
   feedback,
+  feedbackReady,
   onStartClick,
   onStickerClick,
   onVideoEnded,
@@ -29,20 +31,51 @@ export default function QuizStageDesktop({
 
   activeItem: QuizItem | null;
   feedback: FeedbackKind | null;
+  feedbackReady: boolean;
 
   onStartClick: () => void;
   onStickerClick: (index: number) => void;
   onVideoEnded: () => void;
   onReplayVideo: () => void;
   onChooseOX: (c: "O" | "X") => void;
-
   onReset: () => void;
+
   onAllDoneReplay: () => void;
   onAllDoneExit: () => void;
 }) {
-  // ✅ 진행표시
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   const doneCount = completed.filter(Boolean).length;
   const totalCount = completed.length;
+
+  // ✅ 5개 퀴즈 규칙
+  // - 1~4는 항상 노출
+  // - 5는 4번 완료 전에는 숨김(비활성도 X)
+  // - 1~4 완료 & 5 미완료면 5만 노출 + 화살표 숨김
+  const visibility = useMemo(() => {
+    const total = completed.length;
+    const last = total - 1;
+
+    const showOnlyLastSticker =
+      total === 5 &&
+      completed.slice(0, last).every(Boolean) &&
+      !completed[last];
+
+    const firstGroupCount = Math.min(4, total);
+    const firstGroup = Array.from({ length: firstGroupCount }, (_, i) => i);
+
+    // 5번이 보일 수 있는 조건: unlocked가 5 이상(=4번 정답 후 unlock 증가)
+    const canShowLast = total === 5 ? unlocked >= 5 : unlocked >= total;
+    const lastGroup = canShowLast ? [last] : [];
+
+    const visibleIndexes = showOnlyLastSticker
+      ? [last]
+      : [...firstGroup, ...lastGroup];
+
+    const showArrows = !showOnlyLastSticker;
+
+    return { visibleIndexes, showArrows };
+  }, [completed, unlocked]);
 
   const feedbackImg =
     feedback === "correct"
@@ -55,127 +88,90 @@ export default function QuizStageDesktop({
         {/* 칠판은 항상 바닥 */}
         <ChalkboardImg src="/images/quiz/chalkboard.png" alt="" />
 
-        {/* ✅ 진행표시 (영상 중엔 숨김) */}
-        {stage !== "video" && (
-          <ProgressPill>
-            완료 {doneCount}/{totalCount}
-          </ProgressPill>
-        )}
-
-        {/* Reset 버튼(영상/전체완료 중엔 숨김) */}
+        {/* 상단 UI: video / all_done 제외 */}
         {stage !== "video" && stage !== "all_done" && (
-          <ResetBtn type="button" onClick={onReset}>
-            처음부터
-          </ResetBtn>
+          <>
+            <ProgressPill>
+              완료 {doneCount}/{totalCount}
+            </ProgressPill>
+            <ResetBtn type="button" onClick={onReset}>
+              처음부터
+            </ResetBtn>
+          </>
         )}
 
         {/* START */}
         {stage === "start" && (
-          <StartButton
-            type="button"
-            onClick={onStartClick}
-            aria-label="퀴즈 시작"
-          >
+          <StartButton type="button" onClick={onStartClick}>
             <StartImg src="/images/quiz/start.png" alt="시작" />
           </StartButton>
         )}
 
         {/* STICKERS */}
-        {stage === "stickers" &&
-          (() => {
-            const totalCount = completed.length;
-            const lastIndex = totalCount - 1;
+        {stage === "stickers" && (
+          <>
+            {/* 화살표 (마지막만 보기 모드면 숨김) */}
+            {visibility.showArrows &&
+              visibility.visibleIndexes
+                .map((i) => QUIZ_ITEMS[i])
+                .map((item) =>
+                  item.arrowToNext ? (
+                    <ArrowImg
+                      key={`arrow-${item.id}`}
+                      src={item.arrowToNext.src}
+                      alt=""
+                      style={item.arrowToNext.style}
+                    />
+                  ) : null
+                )}
 
-            // ✅ "1~4 완료 && 5 미완료"면 마지막(5번)만 보이게
-            const showOnlyLastSticker =
-              totalCount === 5 &&
-              completed.slice(0, lastIndex).every(Boolean) &&
-              !completed[lastIndex];
+            {/* 스티커 (체크 배지 없음) */}
+            {visibility.visibleIndexes.map((index) => {
+              const item = QUIZ_ITEMS[index];
 
-            // ✅ 기본: 1~4번은 항상 노출
-            // (퀴즈가 5개가 아닐 때도 안전하게 처리)
-            const firstGroupCount = Math.min(4, totalCount);
-            const firstGroup = Array.from(
-              { length: firstGroupCount },
-              (_, i) => i
-            );
+              const isUnlocked = index + 1 <= unlocked;
+              const isCompleted = completed[index];
+              const clickable =
+                isUnlocked && (allowReplayCompleted ? true : !isCompleted);
 
-            // ✅ 5번은 unlocked가 5 이상일 때만 노출 (4번 완료 전엔 아예 없음)
-            const canShowLast =
-              totalCount === 5 ? unlocked >= 5 : unlocked >= totalCount;
-            const lastGroup = canShowLast ? [lastIndex] : [];
-
-            const visibleIndexes = showOnlyLastSticker
-              ? [lastIndex]
-              : [...firstGroup, ...lastGroup];
-
-            // ✅ 마지막만 보일 때는 화살표 전부 숨김
-            const showArrows = !showOnlyLastSticker;
-
-            return (
-              <>
-                {/* 화살표: 마지막만 보기 모드면 숨김 */}
-                {showArrows &&
-                  visibleIndexes
-                    .map((i) => QUIZ_ITEMS[i])
-                    .map((item) =>
-                      item.arrowToNext ? (
-                        <ArrowImg
-                          key={`arrow-${item.id}`}
-                          src={item.arrowToNext.src}
-                          alt=""
-                          style={item.arrowToNext.style}
-                        />
-                      ) : null
-                    )}
-
-                {/* 스티커 */}
-                {visibleIndexes.map((index) => {
-                  const item = QUIZ_ITEMS[index];
-
-                  const isUnlocked = index + 1 <= unlocked;
-                  const isCompleted = completed[index];
-                  const clickable =
-                    isUnlocked && (allowReplayCompleted ? true : !isCompleted);
-
-                  return (
-                    <StickerBtn
-                      key={item.id}
-                      type="button"
-                      $clickable={clickable}
-                      $unlocked={isUnlocked}
-                      $completed={isCompleted}
-                      style={{
-                        left: item.desktopPos.left,
-                        top: item.desktopPos.top,
-                        width: item.desktopPos.width,
-                      }}
-                      onClick={() => onStickerClick(index)}
-                      aria-disabled={!clickable}
-                    >
-                      <StickerImg
-                        src={item.stickerSrc}
-                        alt={item.stickerAlt}
-                        draggable={false}
-                      />
-                      {/* ✅ 체크 표시 제거 */}
-                    </StickerBtn>
-                  );
-                })}
-              </>
-            );
-          })()}
+              return (
+                <StickerBtn
+                  key={item.id}
+                  type="button"
+                  $clickable={clickable}
+                  $unlocked={isUnlocked}
+                  $completed={isCompleted}
+                  style={{
+                    left: item.desktopPos.left,
+                    top: item.desktopPos.top,
+                    width: item.desktopPos.width,
+                  }}
+                  onClick={() => onStickerClick(index)}
+                  aria-disabled={!clickable}
+                >
+                  <StickerImg
+                    src={item.stickerSrc}
+                    alt={item.stickerAlt}
+                    draggable={false}
+                  />
+                </StickerBtn>
+              );
+            })}
+          </>
+        )}
 
         {/* VIDEO */}
         {stage === "video" && activeItem && (
           <VideoOverlay>
             <Video
+              ref={videoRef}
               key={activeItem.videoSrc}
               src={activeItem.videoSrc}
               autoPlay
               muted
               playsInline
               controls={false}
+              preload="metadata"
               onEnded={onVideoEnded}
             />
           </VideoOverlay>
@@ -185,19 +181,12 @@ export default function QuizStageDesktop({
         {stage === "ox" && activeItem && (
           <>
             <QuestionBanner>{activeItem.question}</QuestionBanner>
+
             <OXWrap>
-              <OXBtn
-                type="button"
-                onClick={() => onChooseOX("O")}
-                aria-label="O 선택"
-              >
+              <OXBtn type="button" onClick={() => onChooseOX("O")}>
                 <OXImg src="/images/quiz/ox_o.png" alt="O" />
               </OXBtn>
-              <OXBtn
-                type="button"
-                onClick={() => onChooseOX("X")}
-                aria-label="X 선택"
-              >
+              <OXBtn type="button" onClick={() => onChooseOX("X")}>
                 <OXImg src="/images/quiz/ox_x.png" alt="X" />
               </OXBtn>
             </OXWrap>
@@ -208,28 +197,30 @@ export default function QuizStageDesktop({
           </>
         )}
 
-        {/* FEEDBACK */}
+        {/* FEEDBACK (✅ ready false면 스피너) */}
         {stage === "feedback" && feedback && (
           <FeedbackCenter>
-            <FeedbackImg
-              src={feedbackImg}
-              alt={feedback === "correct" ? "정답" : "오답"}
-              $kind={feedback}
-            />
+            {!feedbackReady ? (
+              <Spinner />
+            ) : (
+              <FeedbackImg
+                src={feedbackImg}
+                alt={feedback === "correct" ? "정답" : "오답"}
+                $kind={feedback}
+              />
+            )}
           </FeedbackCenter>
         )}
 
-        {/* ALL DONE (1안) */}
+        {/* ALL DONE */}
         {stage === "all_done" && (
           <AllDoneOverlay>
             <AllDoneDim />
-
             <AllDoneCard>
               <AllDoneMainImg
                 src="/images/quiz/all_done.png"
                 alt="모든 퀴즈 완료"
               />
-
               <AllDoneBtnRow>
                 <AllDoneBtn type="button" onClick={onAllDoneReplay}>
                   다시 한 번 보기
@@ -246,7 +237,10 @@ export default function QuizStageDesktop({
   );
 }
 
-/* ===== Layout ===== */
+/* ===============================
+ * styled-components
+ * =============================== */
+
 const Viewport = styled.div`
   width: 100vw;
   height: 100vh;
@@ -268,62 +262,53 @@ const ChalkboardImg = styled.img`
   object-fit: fill;
   z-index: 0;
   pointer-events: none;
+  user-select: none;
 `;
 
-/* ✅ Progress */
+/* 상단 */
 const ProgressPill = styled.div`
   position: absolute;
   z-index: 20;
   left: 18px;
   top: 14px;
-
   padding: 10px 12px;
   border-radius: 999px;
-
   background: rgba(255, 255, 255, 0.9);
-  font-weight: 700;
+  font-weight: 900;
+  font-size: 14px;
 `;
 
-/* Reset */
 const ResetBtn = styled.button`
   position: absolute;
   z-index: 20;
   right: 18px;
   top: 14px;
-
   padding: 10px 12px;
   border-radius: 12px;
   border: none;
   cursor: pointer;
-
   background: rgba(255, 255, 255, 0.9);
+  font-weight: 900;
+  font-size: 14px;
 `;
 
-/* Start */
+/* START */
 const StartButton = styled.button`
   position: absolute;
   inset: 0;
   z-index: 2;
-  padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
 `;
+
 const StartImg = styled.img`
   position: absolute;
   left: 50%;
-  bottom: 5%;
+  bottom: 16%;
   transform: translateX(-50%);
-  width: clamp(600px, 22vw, 320px);
+  width: min(70vw, 360px);
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
-`;
-
-/* Arrow */
-const ArrowImg = styled.img`
-  position: absolute;
-  z-index: 2;
-  pointer-events: none;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25));
 `;
 
 /* Stickers */
@@ -333,75 +318,102 @@ const StickerBtn = styled.button<{
   $completed: boolean;
 }>`
   position: absolute;
-  z-index: 2;
-  padding: 18px;
-  border: 0;
+  z-index: 5;
+  border: none;
   background: transparent;
+  padding: 0;
+  cursor: ${(p) => (p.$clickable ? "pointer" : "default")};
 
-  cursor: ${(p) => (p.$clickable ? "pointer" : "not-allowed")};
+  /* 잠김은 흐림 */
   opacity: ${(p) => (p.$unlocked ? 1 : 0.35)};
-  filter: ${(p) => (p.$unlocked ? "none" : "grayscale(1)")};
-
-  ${(p) =>
-    p.$completed &&
-    `
-      opacity: 1;
-      filter: none;
-    `}
+  filter: ${(p) => (p.$unlocked ? "none" : "grayscale(0.85)")};
 
   pointer-events: ${(p) => (p.$clickable ? "auto" : "none")};
 `;
+
 const StickerImg = styled.img`
-  display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
+  display: block;
+  user-select: none;
+`;
+
+/* Arrow */
+const ArrowImg = styled.img`
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  user-select: none;
 `;
 
 /* Video */
 const VideoOverlay = styled.div`
   position: absolute;
   inset: 0;
-  z-index: 10;
-  background: black;
+  z-index: 30;
+  background: #000;
 `;
+
 const Video = styled.video`
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  background: #000;
 `;
 
 /* OX */
+const QuestionBanner = styled.div`
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  top: 10%;
+  transform: translateX(-50%);
+  width: min(86%, 900px);
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  font-weight: 900;
+  font-size: clamp(16px, 2vw, 22px);
+  text-align: center;
+`;
+
 const OXWrap = styled.div`
   position: absolute;
-  z-index: 3;
+  z-index: 10;
   left: 50%;
-  bottom: 12%;
+  top: 15%;
   transform: translateX(-50%);
   display: flex;
-  gap: clamp(18px, 3vw, 36px);
+  gap: 18px;
 `;
+
 const OXBtn = styled.button`
-  padding: 0;
-  border: 0;
+  border: none;
   background: transparent;
+  padding: 0;
   cursor: pointer;
 `;
+
 const OXImg = styled.img`
   width: 50vw;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.28));
 `;
+
 const ReplayBtn = styled.button`
   position: absolute;
-  z-index: 3;
+  z-index: 12;
   left: 50%;
-  bottom: 5%;
+  bottom: 10%;
   transform: translateX(-50%);
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
+  font-size: 15px;
 `;
 
 /* Feedback */
@@ -410,6 +422,7 @@ const popIn = keyframes`
   60% { transform: scale(1.03); opacity: 1; }
   100% { transform: scale(1.00); opacity: 1; }
 `;
+
 const shakeWrong = keyframes`
   0% { transform: translateX(0) scale(0.98); }
   25% { transform: translateX(-10px) scale(1.00); }
@@ -417,22 +430,39 @@ const shakeWrong = keyframes`
   75% { transform: translateX(-6px) scale(1.00); }
   100% { transform: translateX(0) scale(1.00); }
 `;
+
 const FeedbackCenter = styled.div`
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 40;
   display: grid;
   place-items: center;
   pointer-events: none;
 `;
-const FeedbackImg = styled.img<{ $kind: FeedbackKind }>`
-  width: clamp(800px, 34vw, 520px);
+
+const FeedbackImg = styled.img<{ $kind: "correct" | "wrong" }>`
+  width: min(78vw, 720px);
   filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.35));
-  animation: ${popIn} 220ms ease-out both,
+  animation:
+    ${popIn} 220ms ease-out both,
     ${(p) => (p.$kind === "wrong" ? shakeWrong : "none")} 320ms ease-out;
 `;
 
-/* All Done (1안) */
+/* Spinner (feedbackReady false) */
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const Spinner = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  animation: ${spin} 0.9s linear infinite;
+`;
+
+/* ALL DONE */
 const AllDoneOverlay = styled.div`
   position: absolute;
   inset: 0;
@@ -450,45 +480,26 @@ const AllDoneCard = styled.div`
   inset: 0;
   display: grid;
   place-items: center;
-  pointer-events: none;
 `;
 
 const AllDoneMainImg = styled.img`
-  width: clamp(360px, 46vw, 680px);
-  height: auto;
-  pointer-events: none;
+  width: min(86vw, 820px);
   filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.4));
 `;
 
 const AllDoneBtnRow = styled.div`
-  margin-top: 18px;
+  margin-top: 14px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
-  pointer-events: auto;
 `;
 
 const AllDoneBtn = styled.button`
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: 14px;
   border: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.92);
-`;
-
-const QuestionBanner = styled.div`
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 10%;
-  transform: translateX(-50%);
-  width: min(86%, 900px);
-
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
-
   font-weight: 900;
-  font-size: clamp(16px, 2vw, 22px);
-  text-align: center;
+  font-size: 15px;
 `;

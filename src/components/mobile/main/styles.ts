@@ -56,29 +56,86 @@ export const BtnWrap = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 5vw;
 `;
 
 export const BlueBtn = styled.button`
-  width: 200px;
+  width: 45vw;
   height: 50px;
   background-color: #467fd7;
   color: #ffffff;
   border-radius: 25px;
   font-size: 15px;
   border: none;
+  cursor: pointer;
+
+  transition:
+    background-color 0.18s ease,
+    transform 0.12s ease,
+    box-shadow 0.18s ease;
+
+  &:hover {
+    background-color: #3b6fc0; /* 살짝 더 진한 파랑 */
+    box-shadow: 0 10px 18px rgba(70, 127, 215, 0.28);
+  }
+
+  &:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 6px 12px rgba(70, 127, 215, 0.22);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(70, 127, 215, 0.28);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
 `;
 
 export const WhiteBtn = styled.button`
-  width: 200px;
+  width: 45vw;
   height: 50px;
   background-color: #ffffff;
   color: #467fd7;
   border-radius: 25px;
   font-size: 15px;
   border: 1px solid #467fd7;
-`;
+  cursor: pointer;
 
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.12s ease,
+    box-shadow 0.18s ease;
+
+  &:hover {
+    background-color: rgba(70, 127, 215, 0.08); /* 연한 파랑 */
+    color: #3b6fc0;
+    border-color: #3b6fc0;
+    box-shadow: 0 10px 18px rgba(70, 127, 215, 0.16);
+  }
+
+  &:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 6px 12px rgba(70, 127, 215, 0.12);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(70, 127, 215, 0.22);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+`;
 export const QuizWrap = styled.div`
   width: 100%;
   background-color: #f9f9f9;

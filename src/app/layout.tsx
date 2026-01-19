@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import Providers from "./providers/Providers";
 import StyleProvider from "./StyleProvider";
+import GlobalPreloadGate from "@/components/common/GlobalPreloadGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,9 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <StyledComponentsRegistry>
           <Providers initialDevice={initialDevice}>
-            <StyleProvider>{children}</StyleProvider>
+            <StyleProvider>
+              <GlobalPreloadGate>{children}</GlobalPreloadGate>
+            </StyleProvider>
           </Providers>
         </StyledComponentsRegistry>
       </body>
