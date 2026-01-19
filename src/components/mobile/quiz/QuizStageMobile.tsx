@@ -226,7 +226,6 @@ export default function QuizStageMobile({
               ref={videoRef}
               src={activeItem.videoSrc}
               autoPlay
-              muted
               playsInline
               preload="metadata"
               onEnded={() => {
