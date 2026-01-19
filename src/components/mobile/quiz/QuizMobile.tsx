@@ -2,16 +2,38 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QUIZ_ITEMS } from "@/components/desktop/quiz/quizData";
 import QuizStageMobile from "./QuizStageMobile";
+import { QUIZ_ITEMS } from "@/components/desktop/quiz/quizData";
 
 type Stage = "start" | "stickers" | "video" | "ox" | "feedback" | "all_done";
 type FeedbackKind = "correct" | "wrong";
 
-const LS_KEY = "esg-quiz-progress-v1"; // ✅ Desktop과 공유 (Y)
+const LS_KEY = "esg-quiz-progress-v1";
 const ALLOW_REPLAY_COMPLETED = true;
 
 type SavedProgress = { unlocked: number; completed: boolean[] };
+
+function preloadAndDecodeImage(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (!src) return resolve();
+
+    const img = new Image();
+    img.decoding = "async";
+    img.loading = "eager";
+
+    img.onload = async () => {
+      try {
+        if ("decode" in img) {
+          await img.decode();
+        }
+      } catch {}
+      resolve();
+    };
+
+    img.onerror = () => resolve();
+    img.src = src;
+  });
+}
 
 export default function QuizMobile() {
   const router = useRouter();
@@ -26,7 +48,9 @@ export default function QuizMobile() {
   const [activeStickerIndex, setActiveStickerIndex] = useState<number | null>(
     null
   );
+
   const [feedback, setFeedback] = useState<FeedbackKind | null>(null);
+  const [feedbackReady, setFeedbackReady] = useState<boolean>(true);
 
   const activeItem = useMemo(() => {
     if (activeStickerIndex === null) return null;
@@ -34,21 +58,22 @@ export default function QuizMobile() {
   }, [activeStickerIndex]);
 
   const didHydrateRef = useRef(false);
-  const feedbackTimerRef = useRef<number | null>(null);
-  const completedRef = useRef<boolean[]>(completed);
-  useEffect(() => {
-    completedRef.current = completed;
-  }, [completed]);
 
-  const clearTimer = () => {
+  const feedbackTimerRef = useRef<number | null>(null);
+  const clearFeedbackTimer = () => {
     if (feedbackTimerRef.current !== null) {
       window.clearTimeout(feedbackTimerRef.current);
       feedbackTimerRef.current = null;
     }
   };
 
+  const completedRef = useRef<boolean[]>(completed);
+  useEffect(() => {
+    completedRef.current = completed;
+  }, [completed]);
+
   const resetProgress = () => {
-    clearTimer();
+    clearFeedbackTimer();
     try {
       localStorage.removeItem(LS_KEY);
     } catch {}
@@ -56,14 +81,16 @@ export default function QuizMobile() {
     setUnlocked(1);
     setCompleted(Array.from({ length: total }, () => false));
     setActiveStickerIndex(null);
+
     setFeedback(null);
+    setFeedbackReady(true);
+
     setStage("stickers");
   };
 
   const handleAllDoneReplay = () => resetProgress();
   const handleAllDoneExit = () => router.push("/");
 
-  // hydrate
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -94,7 +121,6 @@ export default function QuizMobile() {
     }
   }, [total]);
 
-  // save
   useEffect(() => {
     if (!didHydrateRef.current) return;
     try {
@@ -103,13 +129,16 @@ export default function QuizMobile() {
     } catch {}
   }, [unlocked, completed]);
 
-  useEffect(() => () => clearTimer(), []);
+  useEffect(() => () => clearFeedbackTimer(), []);
 
   const handleStickerClick = (index: number) => {
     if (index + 1 > unlocked) return;
     if (!ALLOW_REPLAY_COMPLETED && completed[index]) return;
 
-    clearTimer();
+    clearFeedbackTimer();
+    setFeedback(null);
+    setFeedbackReady(true);
+
     setActiveStickerIndex(index);
     setStage("video");
   };
@@ -117,33 +146,42 @@ export default function QuizMobile() {
   const handleVideoEnded = () => setStage("ox");
   const handleReplayVideo = () => setStage("video");
 
-  const handleChooseOX = (choice: "O" | "X") => {
+  const handleChooseOX = async (choice: "O" | "X") => {
     if (!activeItem || activeStickerIndex === null) return;
 
-    clearTimer();
+    clearFeedbackTimer();
 
     const idx = activeStickerIndex;
     const correct = choice === activeItem.answer;
+    const kind: FeedbackKind = correct ? "correct" : "wrong";
 
-    setFeedback(correct ? "correct" : "wrong");
+    setFeedback(kind);
+    setFeedbackReady(false);
     setStage("feedback");
+
+    const src =
+      kind === "correct"
+        ? "/images/quiz/feedback_correct.png"
+        : "/images/quiz/feedback_wrong.png";
+
+    await preloadAndDecodeImage(src);
+    setFeedbackReady(true);
 
     feedbackTimerRef.current = window.setTimeout(() => {
       if (!correct) {
         setFeedback(null);
+        setFeedbackReady(true);
         setStage("ox");
         feedbackTimerRef.current = null;
         return;
       }
 
-      // ✅ 최신 completed 기준으로 next 계산
       const base = completedRef.current;
       const nextCompleted = [...base];
       nextCompleted[idx] = true;
 
       const allDone = nextCompleted.every(Boolean);
 
-      // ✅ 한번에 반영
       setCompleted(nextCompleted);
       setUnlocked((prev) => {
         const target = Math.min(idx + 2, total);
@@ -151,6 +189,7 @@ export default function QuizMobile() {
       });
 
       setFeedback(null);
+      setFeedbackReady(true);
       setStage(allDone ? "all_done" : "stickers");
 
       feedbackTimerRef.current = null;
@@ -165,6 +204,7 @@ export default function QuizMobile() {
       allowReplayCompleted={ALLOW_REPLAY_COMPLETED}
       activeItem={activeItem}
       feedback={feedback}
+      feedbackReady={feedbackReady}
       onStartClick={() => setStage("stickers")}
       onStickerClick={handleStickerClick}
       onVideoEnded={handleVideoEnded}

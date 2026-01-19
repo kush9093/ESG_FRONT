@@ -1,8 +1,9 @@
 "use client";
 
 import { QUIZ_ITEMS, QuizItem } from "@/components/desktop/quiz/quizData";
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
+
 type Stage = "start" | "stickers" | "video" | "ox" | "feedback" | "all_done";
 type FeedbackKind = "correct" | "wrong";
 
@@ -13,6 +14,7 @@ export default function QuizStageMobile({
   allowReplayCompleted,
   activeItem,
   feedback,
+  feedbackReady,
   onStartClick,
   onStickerClick,
   onVideoEnded,
@@ -29,53 +31,114 @@ export default function QuizStageMobile({
 
   activeItem: QuizItem | null;
   feedback: FeedbackKind | null;
+  feedbackReady: boolean;
 
   onStartClick: () => void;
   onStickerClick: (index: number) => void;
   onVideoEnded: () => void;
   onReplayVideo: () => void;
   onChooseOX: (c: "O" | "X") => void;
-
   onReset: () => void;
+
   onAllDoneReplay: () => void;
   onAllDoneExit: () => void;
 }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // ✅ 방향 감지 (세로/가로)
+  const [isPortrait, setIsPortrait] = useState(true);
+  useEffect(() => {
+    const update = () => setIsPortrait(window.innerHeight >= window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
   const doneCount = completed.filter(Boolean).length;
   const totalCount = completed.length;
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // ✅ 5개 퀴즈 규칙
+  // - 1~4는 항상 노출
+  // - 5는 4번 완료 전엔 숨김
+  // - 1~4 완료 & 5 미완료면 5만 노출 + 화살표 숨김
+  const visibility = useMemo(() => {
+    const total = completed.length;
+    const last = total - 1;
+
+    const showOnlyLastSticker =
+      total === 5 &&
+      completed.slice(0, last).every(Boolean) &&
+      !completed[last];
+
+    const firstGroupCount = Math.min(4, total);
+    const firstGroup = Array.from({ length: firstGroupCount }, (_, i) => i);
+
+    const canShowLast = total === 5 ? unlocked >= 5 : unlocked >= total;
+    const lastGroup = canShowLast ? [last] : [];
+
+    const visibleIndexes = showOnlyLastSticker
+      ? [last]
+      : [...firstGroup, ...lastGroup];
+
+    const showArrows = !showOnlyLastSticker;
+
+    return { visibleIndexes, showArrows };
+  }, [completed, unlocked]);
+
+  const unlockOrientation = async () => {
+    try {
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    } catch {}
+  };
+
+  const enterFullscreen = async () => {
+    const el = videoRef.current;
+    if (!el) return;
+
+    // 표준 FS
+    try {
+      const requestFs = el.requestFullscreen?.bind(el);
+      if (document.fullscreenEnabled && requestFs) {
+        await requestFs();
+      } else if ("webkitEnterFullscreen" in el) {
+        // iOS Safari video fullscreen
+        (
+          el as HTMLVideoElement & { webkitEnterFullscreen: () => void }
+        ).webkitEnterFullscreen();
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 가능하면 가로 잠금 시도
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock("landscape");
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const feedbackImg =
     feedback === "correct"
       ? "/images/quiz/feedback_correct.png"
       : "/images/quiz/feedback_wrong.png";
 
-  const enterFullscreen = () => {
-    const el = videoRef.current;
-    if (!el) return;
-
-    // 표준 Fullscreen API (대부분 브라우저)
-    if (document.fullscreenEnabled && el.requestFullscreen) {
-      el.requestFullscreen().catch(() => {});
-      return;
-    }
-
-    // iOS Safari: video 전용 fullscreen (webkitEnterFullscreen)
-    // 타입에 없으므로 "타입 가드"로 안전하게 접근
-    if ("webkitEnterFullscreen" in el) {
-      const iosVideo = el as HTMLVideoElement & {
-        webkitEnterFullscreen: () => void;
-      };
-      iosVideo.webkitEnterFullscreen();
-    }
-  };
-
   return (
     <Viewport>
       <BoardCanvas>
+        {/* 칠판은 항상 바닥 */}
         <ChalkboardImg src="/images/quiz/chalkboard.png" alt="" />
 
-        {/* 상단 UI (영상 중엔 숨김) */}
+        {/* 상단 UI (비디오/올완료 제외) */}
         {stage !== "video" && stage !== "all_done" && (
           <>
             <ProgressPill>
@@ -89,96 +152,68 @@ export default function QuizStageMobile({
 
         {/* START */}
         {stage === "start" && (
-          <StartButton
-            type="button"
-            onClick={onStartClick}
-            aria-label="퀴즈 시작"
-          >
+          <StartButton type="button" onClick={onStartClick}>
             <StartImg src="/images/quiz/start.png" alt="시작" />
           </StartButton>
         )}
 
-        {stage === "stickers" &&
-          (() => {
-            const totalCount = completed.length;
-            const lastIndex = totalCount - 1;
+        {/* STICKERS */}
+        {stage === "stickers" && (
+          <>
+            {/* 화살표 (마지막만 보기 모드면 숨김) */}
+            {visibility.showArrows &&
+              visibility.visibleIndexes
+                .map((i) => QUIZ_ITEMS[i])
+                .map((item) =>
+                  item.arrowToNext ? (
+                    <ArrowImg
+                      key={`arrow-${item.id}`}
+                      src={item.arrowToNext.src}
+                      alt=""
+                      style={
+                        item.arrowToNext.mobileStyle ?? item.arrowToNext.style
+                      }
+                    />
+                  ) : null
+                )}
 
-            const showOnlyLastSticker =
-              totalCount === 5 &&
-              completed.slice(0, lastIndex).every(Boolean) &&
-              !completed[lastIndex];
+            {/* 스티커 */}
+            {visibility.visibleIndexes.map((index) => {
+              const item = QUIZ_ITEMS[index];
 
-            const firstGroupCount = Math.min(4, totalCount);
-            const firstGroup = Array.from(
-              { length: firstGroupCount },
-              (_, i) => i
-            );
+              const isUnlocked = index + 1 <= unlocked;
+              const isCompleted = completed[index];
+              const clickable =
+                isUnlocked && (allowReplayCompleted ? true : !isCompleted);
 
-            const canShowLast =
-              totalCount === 5 ? unlocked >= 5 : unlocked >= totalCount;
-            const lastGroup = canShowLast ? [lastIndex] : [];
+              return (
+                <StickerBtn
+                  key={item.id}
+                  type="button"
+                  $clickable={clickable}
+                  $unlocked={isUnlocked}
+                  $completed={isCompleted}
+                  style={{
+                    left: item.mobilePos.left,
+                    top: item.mobilePos.top,
+                    width: item.mobilePos.width,
+                  }}
+                  onClick={() => onStickerClick(index)}
+                  aria-disabled={!clickable}
+                >
+                  <StickerImg
+                    src={item.stickerSrc}
+                    alt={item.stickerAlt}
+                    draggable={false}
+                  />
+                  {/* ✅ 체크 배지 제거 */}
+                </StickerBtn>
+              );
+            })}
+          </>
+        )}
 
-            const visibleIndexes = showOnlyLastSticker
-              ? [lastIndex]
-              : [...firstGroup, ...lastGroup];
-            const showArrows = !showOnlyLastSticker;
-
-            return (
-              <>
-                {showArrows &&
-                  visibleIndexes
-                    .map((i) => QUIZ_ITEMS[i])
-                    .map((item) =>
-                      item.arrowToNext ? (
-                        <ArrowImg
-                          key={`arrow-${item.id}`}
-                          src={item.arrowToNext.src}
-                          alt=""
-                          style={
-                            item.arrowToNext.mobileStyle ??
-                            item.arrowToNext.style
-                          }
-                        />
-                      ) : null
-                    )}
-
-                {visibleIndexes.map((index) => {
-                  const item = QUIZ_ITEMS[index];
-
-                  const isUnlocked = index + 1 <= unlocked;
-                  const isCompleted = completed[index];
-                  const clickable =
-                    isUnlocked && (allowReplayCompleted ? true : !isCompleted);
-
-                  return (
-                    <StickerBtn
-                      key={item.id}
-                      type="button"
-                      $clickable={clickable}
-                      $unlocked={isUnlocked}
-                      $completed={isCompleted}
-                      style={{
-                        left: item.mobilePos.left,
-                        top: item.mobilePos.top,
-                        width: item.mobilePos.width,
-                      }}
-                      onClick={() => onStickerClick(index)}
-                      aria-disabled={!clickable}
-                    >
-                      <StickerImg
-                        src={item.stickerSrc}
-                        alt={item.stickerAlt}
-                        draggable={false}
-                      />
-                      {/* ✅ 체크 표시 제거 */}
-                    </StickerBtn>
-                  );
-                })}
-              </>
-            );
-          })()}
-
-        {/* VIDEO (전체 오버레이 + 전체화면 버튼) */}
+        {/* VIDEO */}
         {stage === "video" && activeItem && (
           <VideoOverlay>
             <VideoTopBar>
@@ -186,6 +221,21 @@ export default function QuizStageMobile({
                 전체화면
               </VideoBtn>
             </VideoTopBar>
+
+            {/* ✅ 세로면 가로 유도 오버레이 (video에서만) */}
+            {isPortrait && (
+              <RotateHint>
+                <RotateCard>
+                  <RotateTitle>가로로 보면 더 크게 보여요!</RotateTitle>
+                  <RotateDesc>
+                    휴대폰을 가로로 돌리거나 아래 버튼을 눌러주세요.
+                  </RotateDesc>
+                  <RotateBtn type="button" onClick={enterFullscreen}>
+                    가로로 보기
+                  </RotateBtn>
+                </RotateCard>
+              </RotateHint>
+            )}
 
             <Video
               ref={videoRef}
@@ -196,7 +246,11 @@ export default function QuizStageMobile({
               playsInline
               controls={false}
               preload="metadata"
-              onEnded={onVideoEnded}
+              $portrait={isPortrait}
+              onEnded={() => {
+                unlockOrientation();
+                onVideoEnded();
+              }}
             />
           </VideoOverlay>
         )}
@@ -205,19 +259,12 @@ export default function QuizStageMobile({
         {stage === "ox" && activeItem && (
           <>
             <QuestionBanner>{activeItem.question}</QuestionBanner>
+
             <OXWrap>
-              <OXBtn
-                type="button"
-                onClick={() => onChooseOX("O")}
-                aria-label="O 선택"
-              >
+              <OXBtn type="button" onClick={() => onChooseOX("O")}>
                 <OXImg src="/images/quiz/ox_o.png" alt="O" />
               </OXBtn>
-              <OXBtn
-                type="button"
-                onClick={() => onChooseOX("X")}
-                aria-label="X 선택"
-              >
+              <OXBtn type="button" onClick={() => onChooseOX("X")}>
                 <OXImg src="/images/quiz/ox_x.png" alt="X" />
               </OXBtn>
             </OXWrap>
@@ -228,14 +275,18 @@ export default function QuizStageMobile({
           </>
         )}
 
-        {/* FEEDBACK */}
+        {/* FEEDBACK (✅ first click 누락 방지: 준비 전엔 스피너) */}
         {stage === "feedback" && feedback && (
           <FeedbackCenter>
-            <FeedbackImg
-              src={feedbackImg}
-              alt={feedback === "correct" ? "정답" : "오답"}
-              $kind={feedback}
-            />
+            {!feedbackReady ? (
+              <Spinner />
+            ) : (
+              <FeedbackImg
+                src={feedbackImg}
+                alt={feedback === "correct" ? "정답" : "오답"}
+                $kind={feedback}
+              />
+            )}
           </FeedbackCenter>
         )}
 
@@ -243,7 +294,6 @@ export default function QuizStageMobile({
         {stage === "all_done" && (
           <AllDoneOverlay>
             <AllDoneDim />
-
             <AllDoneCard>
               <AllDoneMainImg
                 src="/images/quiz/all_done.png"
@@ -266,7 +316,10 @@ export default function QuizStageMobile({
   );
 }
 
-/* ===== Layout ===== */
+/* ===============================
+ * styled-components
+ * =============================== */
+
 const Viewport = styled.div`
   width: 100vw;
   height: 100vh;
@@ -280,13 +333,12 @@ const BoardCanvas = styled.div`
   isolation: isolate;
 `;
 
-/* ✅ B: cover */
 const ChalkboardImg = styled.img`
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   z-index: 0;
   pointer-events: none;
 `;
@@ -296,11 +348,11 @@ const ProgressPill = styled.div`
   z-index: 20;
   left: 12px;
   top: 10px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
   font-weight: 800;
-  font-size: 14px;
+  font-size: 12px;
 `;
 
 const ResetBtn = styled.button`
@@ -308,20 +360,20 @@ const ResetBtn = styled.button`
   z-index: 20;
   right: 12px;
   top: 10px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border-radius: 12px;
   border: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.9);
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 12px;
 `;
 
-/* Start */
+/* START */
 const StartButton = styled.button`
   position: absolute;
   inset: 0;
   z-index: 2;
-  padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -332,16 +384,8 @@ const StartImg = styled.img`
   left: 50%;
   bottom: 16%;
   transform: translateX(-50%);
-  width: min(70vw, 320px);
+  width: min(78vw, 320px);
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
-`;
-
-/* Arrow */
-const ArrowImg = styled.img`
-  position: absolute;
-  z-index: 2;
-  pointer-events: none;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25));
 `;
 
 /* Stickers */
@@ -351,99 +395,154 @@ const StickerBtn = styled.button<{
   $completed: boolean;
 }>`
   position: absolute;
-  z-index: 2;
-
-  /* 모바일 터치 히트박스 확대 */
-  padding: 22px;
-  border: 0;
+  z-index: 5;
+  border: none;
   background: transparent;
-
-  cursor: ${(p) => (p.$clickable ? "pointer" : "not-allowed")};
+  padding: 0;
+  cursor: ${(p) => (p.$clickable ? "pointer" : "default")};
   opacity: ${(p) => (p.$unlocked ? 1 : 0.35)};
-  filter: ${(p) => (p.$unlocked ? "none" : "grayscale(1)")};
-
-  ${(p) =>
-    p.$completed &&
-    `
-      opacity: 1;
-      filter: none;
-    `}
-
+  filter: ${(p) => (p.$unlocked ? "none" : "grayscale(0.8)")};
   pointer-events: ${(p) => (p.$clickable ? "auto" : "none")};
-  -webkit-tap-highlight-color: transparent;
 `;
 
 const StickerImg = styled.img`
-  display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
+  display: block;
+  user-select: none;
+`;
+
+/* Arrow */
+const ArrowImg = styled.img`
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  user-select: none;
 `;
 
 /* Video */
 const VideoOverlay = styled.div`
   position: absolute;
   inset: 0;
-  z-index: 10;
-  background: black;
+  z-index: 30;
 `;
 
 const VideoTopBar = styled.div`
   position: absolute;
-  z-index: 11;
+  z-index: 33;
+  left: 12px;
   top: 10px;
-  right: 10px;
 `;
 
 const VideoBtn = styled.button`
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.92);
-  font-weight: 800;
+  font-weight: 900;
 `;
 
-const Video = styled.video`
+const Video = styled.video<{ $portrait: boolean }>`
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: ${(p) => (p.$portrait ? "cover" : "contain")};
+  background: #000;
+`;
+
+/* Rotate Hint (video only) */
+const RotateHint = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 32;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+`;
+
+const RotateCard = styled.div`
+  width: min(88vw, 360px);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 18px 16px;
+  text-align: center;
+`;
+
+const RotateTitle = styled.div`
+  font-weight: 900;
+  font-size: 16px;
+  margin-bottom: 6px;
+`;
+
+const RotateDesc = styled.div`
+  font-weight: 700;
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 12px;
+`;
+
+const RotateBtn = styled.button`
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-weight: 900;
 `;
 
 /* OX */
+const QuestionBanner = styled.div`
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  top: 9%;
+  transform: translateX(-50%);
+  width: min(92vw, 520px);
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
+  font-size: 14px;
+  text-align: center;
+`;
+
 const OXWrap = styled.div`
   position: absolute;
-  z-index: 3;
+  z-index: 10;
   left: 50%;
-  bottom: 12%;
+  top: 38%;
   transform: translateX(-50%);
   display: flex;
-  gap: 14px;
 `;
 
 const OXBtn = styled.button`
-  padding: 0;
-  border: 0;
+  border: none;
   background: transparent;
+  padding: 0;
   cursor: pointer;
 `;
 
 const OXImg = styled.img`
   width: min(100vw, 250px);
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.28));
 `;
 
 const ReplayBtn = styled.button`
   position: absolute;
-  z-index: 3;
+  z-index: 12;
   left: 50%;
-  bottom: 5%;
+  bottom: 10%;
   transform: translateX(-50%);
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
 `;
 
 /* Feedback */
@@ -452,6 +551,7 @@ const popIn = keyframes`
   60% { transform: scale(1.03); opacity: 1; }
   100% { transform: scale(1.00); opacity: 1; }
 `;
+
 const shakeWrong = keyframes`
   0% { transform: translateX(0) scale(0.98); }
   25% { transform: translateX(-10px) scale(1.00); }
@@ -463,20 +563,34 @@ const shakeWrong = keyframes`
 const FeedbackCenter = styled.div`
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 40;
   display: grid;
   place-items: center;
   pointer-events: none;
 `;
 
-const FeedbackImg = styled.img<{ $kind: FeedbackKind }>`
-  width: min(78vw, 520px);
+const FeedbackImg = styled.img<{ $kind: "correct" | "wrong" }>`
+  width: min(86vw, 720px);
   filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.35));
-  animation: ${popIn} 220ms ease-out both,
+  animation:
+    ${popIn} 220ms ease-out both,
     ${(p) => (p.$kind === "wrong" ? shakeWrong : "none")} 320ms ease-out;
 `;
 
-/* All Done */
+/* Spinner (feedbackReady false) */
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+const Spinner = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  animation: ${spin} 0.9s linear infinite;
+`;
+
+/* ALL DONE */
 const AllDoneOverlay = styled.div`
   position: absolute;
   inset: 0;
@@ -494,13 +608,10 @@ const AllDoneCard = styled.div`
   inset: 0;
   display: grid;
   place-items: center;
-  pointer-events: none;
 `;
 
 const AllDoneMainImg = styled.img`
-  width: min(86vw, 680px);
-  height: auto;
-  pointer-events: none;
+  width: min(92vw, 760px);
   filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.4));
 `;
 
@@ -509,7 +620,6 @@ const AllDoneBtnRow = styled.div`
   display: flex;
   gap: 10px;
   justify-content: center;
-  pointer-events: auto;
 `;
 
 const AllDoneBtn = styled.button`
@@ -518,22 +628,5 @@ const AllDoneBtn = styled.button`
   border: none;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.92);
-  font-weight: 800;
-`;
-
-const QuestionBanner = styled.div`
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 10%;
-  transform: translateX(-50%);
-  width: min(92vw, 520px);
-
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-
   font-weight: 900;
-  font-size: 14px;
-  text-align: center;
 `;
