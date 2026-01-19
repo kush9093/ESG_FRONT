@@ -168,7 +168,6 @@ export default function QuizStageDesktop({
               key={activeItem.videoSrc}
               src={activeItem.videoSrc}
               autoPlay
-              muted
               playsInline
               controls={false}
               preload="metadata"
