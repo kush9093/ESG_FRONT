@@ -393,13 +393,14 @@ const RotateBtn = styled.button``;
 
 const QuestionBanner = styled.div`
   position: absolute;
+  width: 85vw;
   top: 8%;
   left: 50%;
   transform: translateX(-50%);
   background: #fff;
   padding: 12px 14px;
   border-radius: 14px;
-  font-weight: 800;
+  font-size: 40px;
 `;
 
 const OXWrap = styled.div`
@@ -408,7 +409,7 @@ const OXWrap = styled.div`
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 14px;
+  gap: 10vw;
 `;
 
 const OXBtn = styled.button`
@@ -417,7 +418,7 @@ const OXBtn = styled.button`
 `;
 
 const OXImg = styled.img`
-  width: 120px;
+  width: 35vw;
 `;
 
 const ReplayBtn = styled.button`
