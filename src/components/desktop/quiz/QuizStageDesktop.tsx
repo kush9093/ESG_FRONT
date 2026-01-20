@@ -122,7 +122,7 @@ export default function QuizStageDesktop({
                       alt=""
                       style={item.arrowToNext.style}
                     />
-                  ) : null
+                  ) : null,
                 )}
 
             {/* 스티커 (체크 배지 없음) */}
@@ -374,7 +374,7 @@ const QuestionBanner = styled.div`
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
   font-weight: 900;
-  font-size: clamp(16px, 2vw, 22px);
+  font-size: 60px;
   text-align: center;
 `;
 
@@ -382,10 +382,10 @@ const OXWrap = styled.div`
   position: absolute;
   z-index: 10;
   left: 50%;
-  top: 15%;
+  top: 35%;
   transform: translateX(-50%);
   display: flex;
-  gap: 18px;
+  gap: 20vw;
 `;
 
 const OXBtn = styled.button`
@@ -396,7 +396,7 @@ const OXBtn = styled.button`
 `;
 
 const OXImg = styled.img`
-  width: 50vw;
+  width: 20vw;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.28));
 `;
 
