@@ -143,7 +143,7 @@ export default function QuizStageMobile({
     <Viewport>
       <BoardCanvas>
         {/* 칠판 */}
-        <ChalkboardImg src="/images/chalkboard.png" alt="" />
+        <ChalkboardImg src="/images/quiz/chalkboard.png" alt="" />
 
         {/* 상단 UI */}
         {stage !== "video" && stage !== "all_done" && (
@@ -180,7 +180,7 @@ export default function QuizStageMobile({
                         item.arrowToNext.mobileStyle ?? item.arrowToNext.style
                       }
                     />
-                  ) : null
+                  ) : null,
                 )}
 
             {visibility.visibleIndexes.map((index) => {
